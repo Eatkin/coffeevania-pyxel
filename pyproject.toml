@@ -1,0 +1,54 @@
+# Base pyproject.toml template 
+# Linting rules for max line length, max complexity, enforced one import per line
+[project]
+name = "project-name"
+version = "0.1.0"
+description = "A short description of your project."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    { name="Your Name", email="your.email@example.com" }
+]
+license = { text="MIT" }
+keywords = ["python", "starter", "template"]
+
+dependencies = [
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "isort",
+    "mypy",
+    "flake8",
+    "flake8-bugbear",
+    "flake8-comprehensions",
+]
+
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.isort]
+profile = "black"
+force_single_line = true        
+lines_after_imports = 2
+multi_line_output = 3
+include_trailing_comma = true
+
+[tool.flake8]
+max-line-length = 88
+max-complexity = 10  # max McCabe complexity per function
+extend-ignore = ["E203", "W503"]  # black-compatible ignores
+select = ["E", "F", "W", "C90", "B", "COM"]  # E: pycodestyle, F: pyflakes, W: warnings, C90: mccabe, B: bugbear, COM: comprehensions
+
+[tool.mypy]
+python_version = 3.12
+strict = true
+ignore_missing_imports = true
+
