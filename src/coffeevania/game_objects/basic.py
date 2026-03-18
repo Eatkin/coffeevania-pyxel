@@ -10,6 +10,7 @@ from coffeevania.components.collision import CollisionRectangle
 from coffeevania.components.common import REQUIRED_COMPONENTS
 from coffeevania.components.position import Position
 from coffeevania.components.velocity import Velocity
+from coffeevania.handlers.input import Action
 from coffeevania.utils import Collidable, clamp
 from coffeevania.utils import lerp
 from coffeevania.utils import overlaps
@@ -46,6 +47,14 @@ class CoffeevaniaEntity(Entity):
                     f"{self.__class__.__name__} missing required component: {component}"
                 )
 
+    @property
+    def debug(self) -> bool:
+        return self.context.debug
+
+    @property
+    def speed_factor(self) -> float:
+        return 1 / self.context.time_dilation
+
 
 class Player(CoffeevaniaEntity):
     position: Position
@@ -59,7 +68,7 @@ class Player(CoffeevaniaEntity):
 
     @property
     def blocks(self) -> List[Collidable]:
-        return [e for e in self.context.collidables if e is not self]
+        return [e for e in self.context.collidables if e is not self and e.collision.solid]
 
     def update(self) -> None:
         hinput = self.context.input_handler.hinput
@@ -75,13 +84,16 @@ class Player(CoffeevaniaEntity):
         # X axis
         self.position.x += self.velocity.xspeed
         if any(overlaps(self, b) for b in self.blocks):
-            self.position.x -= hinput
-            step = 1 if hinput > 0 else -1
+            self.position.x -= self.velocity.xspeed
+            step = 1 if self.velocity.xspeed > 0 else -1
             while not any(overlaps(self, b) for b in self.blocks):
                 self.position.x += step
             self.position.x -= step
+            self.velocity.xspeed = 0
+            # Round in the direction of step
+            self.position.x = pyxel.floor(self.position.x) if step == -1 else pyxel.ceil(self.position.x)
 
-        # Y axis
+        # Y axis - hold jump for lower gravity i.e. higher jump
         self.position.y += self.velocity.yspeed
         if any(overlaps(self, b) for b in self.blocks):
             self.position.y -= self.velocity.yspeed
@@ -90,27 +102,38 @@ class Player(CoffeevaniaEntity):
                 self.position.y += step
             self.position.y -= step
             self.velocity.yspeed = 0
+            # Round in the direction of step
+            self.position.y = pyxel.floor(self.position.y) if step == -1 else pyxel.ceil(self.position.y)
 
         # Jump + gravity
-        # TODO: Hold jump to jump higher / don't hold to jump lower
         if self.context.input_handler.jump and self._is_grounded():
             self.velocity.yspeed = -self.jump_force
 
         # Acceleration due to gravity
+        # Allow holding jump to lessen effects of gravity
         self.velocity.yspeed = clamp(
-            self.velocity.yspeed + self.context.gravity,
+            self.velocity.yspeed + self.context.gravity * (1 - 0.4 * self.context.input_handler.held(Action.JUMP)),
             -self.velocity.max_yspeed,
             self.velocity.max_yspeed,
         )
 
+        if self.debug:
+            self.debug_controls()
+
     def draw(self) -> None:
         pyxel.rect(self.position.x, self.position.y, 8, 8, 9)
+        if self.debug:
+            pyxel.text(self.position.x + 8, self.position.y, f"x: {self.position.x:.2f}, y: {self.position.y:.2f}", 3)
 
     def _is_grounded(self) -> bool:
         self.position.y += 1
         grounded = any(overlaps(self, b) for b in self.blocks)
         self.position.y -= 1
         return bool(grounded)
+
+    def debug_controls(self) -> None:
+        if self.context.input_handler.pressed(Action.DEBUG_DILATE):
+            self.context.time_dilation *= 2
 
 
 class Block(CoffeevaniaEntity):
@@ -120,7 +143,7 @@ class Block(CoffeevaniaEntity):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.collision = CollisionRectangle(8, 8)
+        self.collision = CollisionRectangle(8, 8, solid=True)
 
     def draw(self) -> None:
         pyxel.rect(self.position.x, self.position.y, 8, 8, 1)

@@ -12,4 +12,5 @@ class CollisionRectangle(Collision):
     height: float
     offset_x: float = 0.0
     offset_y: float = 0.0
+    solid: bool = False
 

@@ -25,6 +25,9 @@ class App:
         for e in self.entities:
             e.draw()
 
+        if self.context.debug:
+            pyxel.text(2, 2, "DEBUG BUILD", 3)
+
     def run(self) -> None:
         pyxel.run(self.update, self.draw)
 

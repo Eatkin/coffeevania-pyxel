@@ -17,7 +17,8 @@ class GlobalContext:
     app: "App"
     time_dilation: int = 1
     input_handler: InputHandler = field(default_factory=InputHandler)
-    gravity: float = 1
+    gravity: float = 1.4
+    debug: bool = True
 
     @property
     def entity_list(self) -> List["CoffeevaniaEntity"]:
