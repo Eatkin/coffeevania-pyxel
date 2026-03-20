@@ -13,6 +13,8 @@ license = { text="MIT" }
 keywords = ["python", "starter", "template"]
 
 dependencies = [
+"pyxel",
+"pillow"
 ]
 
 [project.optional-dependencies]

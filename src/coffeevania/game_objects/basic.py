@@ -1,4 +1,5 @@
-from typing import Any, List
+from typing import Any
+from typing import List
 from typing import Optional
 from typing import Tuple
 
@@ -6,12 +7,16 @@ import pyxel
 
 from coffeevania.common.context import GlobalContext
 from coffeevania.components import Component
+from coffeevania.components.animation import Animator
 from coffeevania.components.collision import CollisionRectangle
 from coffeevania.components.common import REQUIRED_COMPONENTS
 from coffeevania.components.position import Position
 from coffeevania.components.velocity import Velocity
+from coffeevania.game.graphics import Sprite
+from coffeevania.game.states import CatState
 from coffeevania.handlers.input import Action
-from coffeevania.utils import Collidable, clamp
+from coffeevania.utils import Collidable
+from coffeevania.utils import clamp
 from coffeevania.utils import lerp
 from coffeevania.utils import overlaps
 
@@ -65,10 +70,18 @@ class Player(CoffeevaniaEntity):
         self.collision = CollisionRectangle(8, 8)
         self.velocity = Velocity(max_xspeed=2, max_yspeed=8)
         self.jump_force = 8
+        self.animator = Animator(
+            sprites={
+                CatState.IDLE: Sprite(bank=0, src_x=0, src_y=0, frame_count=7),
+            }
+        )
+        self.state = CatState.IDLE
 
     @property
     def blocks(self) -> List[Collidable]:
-        return [e for e in self.context.collidables if e is not self and e.collision.solid]
+        return [
+            e for e in self.context.collidables if e is not self and e.collision.solid
+        ]
 
     def update(self) -> None:
         hinput = self.context.input_handler.hinput
@@ -91,7 +104,11 @@ class Player(CoffeevaniaEntity):
             self.position.x -= step
             self.velocity.xspeed = 0
             # Round in the direction of step
-            self.position.x = pyxel.floor(self.position.x) if step == -1 else pyxel.ceil(self.position.x)
+            self.position.x = (
+                pyxel.floor(self.position.x)
+                if step == -1
+                else pyxel.ceil(self.position.x)
+            )
 
         # Y axis - hold jump for lower gravity i.e. higher jump
         self.position.y += self.velocity.yspeed
@@ -103,7 +120,11 @@ class Player(CoffeevaniaEntity):
             self.position.y -= step
             self.velocity.yspeed = 0
             # Round in the direction of step
-            self.position.y = pyxel.floor(self.position.y) if step == -1 else pyxel.ceil(self.position.y)
+            self.position.y = (
+                pyxel.floor(self.position.y)
+                if step == -1
+                else pyxel.ceil(self.position.y)
+            )
 
         # Jump + gravity
         if self.context.input_handler.jump and self._is_grounded():
@@ -112,7 +133,9 @@ class Player(CoffeevaniaEntity):
         # Acceleration due to gravity
         # Allow holding jump to lessen effects of gravity
         self.velocity.yspeed = clamp(
-            self.velocity.yspeed + self.context.gravity * (1 - 0.4 * self.context.input_handler.held(Action.JUMP)),
+            self.velocity.yspeed
+            + self.context.gravity
+            * (1 - 0.4 * self.context.input_handler.held(Action.JUMP)),
             -self.velocity.max_yspeed,
             self.velocity.max_yspeed,
         )
@@ -120,16 +143,39 @@ class Player(CoffeevaniaEntity):
         if self.debug:
             self.debug_controls()
 
+        self._update_state()
+
     def draw(self) -> None:
-        pyxel.rect(self.position.x, self.position.y, 8, 8, 9)
+        # OVERRIDE BECAUSE ONLY IDLE EXISTS
+        # TODO: Update state
+        self.animator.draw(state=CatState.IDLE, position=self.position)
         if self.debug:
-            pyxel.text(self.position.x + 8, self.position.y, f"x: {self.position.x:.2f}, y: {self.position.y:.2f}", 3)
+            pyxel.text(
+                self.position.x + 8,
+                self.position.y,
+                f"x: {self.position.x:.2f}, y: {self.position.y:.2f}",
+                3,
+            )
 
     def _is_grounded(self) -> bool:
         self.position.y += 1
         grounded = any(overlaps(self, b) for b in self.blocks)
         self.position.y -= 1
         return bool(grounded)
+
+    def _update_state(self) -> None:
+        if not self._is_grounded():
+            self.state = (
+                CatState.JUMPING if self.velocity.yspeed < 0 else CatState.FALLING
+            )
+        elif abs(self.velocity.xspeed) > 0.1:
+            self.state = CatState.RUNNING
+        else:
+            self.state = CatState.IDLE
+
+        # OVERRIDE BECAUSE ONLY IDLE EXISTS
+        # TODO: REMOVE
+        self.animator.update(CatState.IDLE)
 
     def debug_controls(self) -> None:
         if self.context.input_handler.pressed(Action.DEBUG_DILATE):

@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any
 from typing import List
 from typing import Type
@@ -9,12 +10,19 @@ from coffeevania.common.game import GAME_HEIGHT
 from coffeevania.common.game import GAME_WIDTH
 from coffeevania.game_objects.basic import CoffeevaniaEntity
 
+BASE_DIR = Path(__file__).parent.parent.parent.parent
+
 
 class App:
-    def __init__(self, game_width: int = GAME_WIDTH, game_height: int = GAME_HEIGHT) -> None:
+    def __init__(
+        self, game_width: int = GAME_WIDTH, game_height: int = GAME_HEIGHT
+    ) -> None:
         pyxel.init(game_width, game_height)
         self.entities: List[CoffeevaniaEntity] = []
         self.context = GlobalContext(app=self)
+
+        # Load image banks
+        pyxel.images[0].load(0, 0, str(BASE_DIR / "assets/player/player_idle.png"))
 
     def update(self) -> None:
         for e in self.entities:
