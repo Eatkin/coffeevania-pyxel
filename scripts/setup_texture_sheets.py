@@ -1,16 +1,18 @@
 import json
 import os
-from dataclasses import asdict
-from dataclasses import dataclass
-from glob import glob
-from pathlib import Path
 import re
-from typing import Any, Dict, Tuple
+from dataclasses import asdict
+from glob import glob
+from typing import Any
+from typing import Dict
 from typing import List
+from typing import Tuple
 
 from PIL import Image
 
-ASSETS_DIR = Path(__file__).parent.parent / "assets"
+from coffeevania.game.graphics import SpriteData
+from coffeevania.common import ASSETS_PATH
+
 IMAGE_BANK_SIZE = (256, 256)  # width / height
 GRID_SIZE = 8
 IMAGE_BANK_CELLS: List[List[List[int]]]
@@ -33,15 +35,6 @@ for i in range(3):
 IMAGE_BANK_ATLAS: List[Image.Image] = [
     Image.new(mode="RGBA", size=(256, 256)) for _ in range(3)
 ]
-
-
-@dataclass
-class SpriteData:
-    bank: int
-    x: int
-    y: int
-    width: int
-    height: int
 
 
 IMAGE_DATA: Dict[str, Dict[str, Any]] = {}
@@ -105,10 +98,10 @@ def output_image_banks(output_dir: str) -> None:
 
 
 def main() -> None:
-    sprites = glob(f"{ASSETS_DIR}/**/*.png", recursive=True)
+    sprites = glob(f"{ASSETS_PATH}/**/*.png", recursive=True)
     for sprite in sprites:
         # Ignore banks
-        if re.match(r'.*?bank_\d\.png$', sprite):
+        if re.match(r".*?bank_\d\.png$", sprite):
             print("Skipping", sprite)
             continue
         print("Placing sprite", sprite)

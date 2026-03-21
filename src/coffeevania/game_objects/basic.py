@@ -12,7 +12,6 @@ from coffeevania.components.collision import CollisionRectangle
 from coffeevania.components.common import REQUIRED_COMPONENTS
 from coffeevania.components.position import Position
 from coffeevania.components.velocity import Velocity
-from coffeevania.game.graphics import Sprite
 from coffeevania.game.states import CatState
 from coffeevania.handlers.input import Action
 from coffeevania.utils import Collidable
@@ -70,12 +69,11 @@ class Player(CoffeevaniaEntity):
         self.collision = CollisionRectangle(8, 8)
         self.velocity = Velocity(max_xspeed=2, max_yspeed=8)
         self.jump_force = 8
-        self.animator = Animator(
-            sprites={
-                CatState.IDLE: Sprite(bank=0, src_x=0, src_y=0, frame_count=7),
-            }
-        )
         self.state = CatState.IDLE
+        animation_data = {CatState.IDLE: "PlayerIdle"}
+        self.animator = Animator(
+            animation_data=animation_data, starting_state=self.state
+        )
 
     @property
     def blocks(self) -> List[Collidable]:
@@ -144,11 +142,11 @@ class Player(CoffeevaniaEntity):
             self.debug_controls()
 
         self._update_state()
+        self.animator.update(self.state)
+        self.animator.face_towards(hinput)
 
     def draw(self) -> None:
-        # OVERRIDE BECAUSE ONLY IDLE EXISTS
-        # TODO: Update state
-        self.animator.draw(state=CatState.IDLE, position=self.position)
+        self.animator.draw(position=self.position)
         if self.debug:
             pyxel.text(
                 self.position.x + 8,
@@ -172,10 +170,6 @@ class Player(CoffeevaniaEntity):
             self.state = CatState.RUNNING
         else:
             self.state = CatState.IDLE
-
-        # OVERRIDE BECAUSE ONLY IDLE EXISTS
-        # TODO: REMOVE
-        self.animator.update(CatState.IDLE)
 
     def debug_controls(self) -> None:
         if self.context.input_handler.pressed(Action.DEBUG_DILATE):
