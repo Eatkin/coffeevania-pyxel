@@ -9,7 +9,7 @@ from coffeevania.game_objects.hazards import BouncingHazard
 
 def main() -> None:
     game = App()
-    game.create_entity(Player, position=Position(x=16, y=16))
+    player = game.create_entity(Player, position=Position(x=16, y=16))
     # Create a floor
     for i in range(0, GAME_WIDTH, 8):
         game.create_entity(Block, position=Position(x=i, y=GAME_HEIGHT - 8))
@@ -19,7 +19,8 @@ def main() -> None:
 
     # Some bouncing hazard
     game.create_entity(BouncingHazard, position=Position(x=40, y=80))
-    game.run()
+    assert isinstance(player, Player)
+    game.run(player)
 
 
 if __name__ == "__main__":

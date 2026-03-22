@@ -7,10 +7,10 @@ import pyxel
 
 from coffeevania.common.context import GlobalContext
 from coffeevania.components import Component
-from coffeevania.components.animation import Animator
 from coffeevania.components.collision import CollisionRectangle
 from coffeevania.components.common import REQUIRED_COMPONENTS
 from coffeevania.components.position import Position
+from coffeevania.components.sprites import Animator
 from coffeevania.components.velocity import Velocity
 from coffeevania.game.states import CatState
 from coffeevania.handlers.input import Action
@@ -36,6 +36,9 @@ class Entity:
         pass
 
     def draw(self) -> None:
+        pass
+
+    def draw_hud(self) -> None:
         pass
 
 
@@ -70,9 +73,9 @@ class Player(CoffeevaniaEntity):
         self.velocity = Velocity(max_xspeed=2, max_yspeed=8)
         self.jump_force = 8
         self.state = CatState.IDLE
-        animation_data = {CatState.IDLE: "PlayerIdle"}
+        animation_data = {CatState.IDLE: "PlayerIdle", CatState.RUNNING: "PlayerMove"}
         self.animator = Animator(
-            animation_data=animation_data, starting_state=self.state
+            animation_data=animation_data, starting_state=self.state, frame_duration=4
         )
 
     @property
@@ -151,7 +154,7 @@ class Player(CoffeevaniaEntity):
             pyxel.text(
                 self.position.x + 8,
                 self.position.y,
-                f"x: {self.position.x:.2f}, y: {self.position.y:.2f}",
+                str(self.animator.animation.sprite_data.bank),
                 3,
             )
 

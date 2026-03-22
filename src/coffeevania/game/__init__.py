@@ -1,14 +1,17 @@
 from pathlib import Path
 from typing import Any
 from typing import List
+from typing import Optional
 from typing import Type
 
 import pyxel
 
 from coffeevania.common.context import GlobalContext
-from coffeevania.common.game import GAME_HEIGHT
+from coffeevania.common.game import CAMERA_PADDING_X, CAMERA_PADDING_Y, GAME_HEIGHT
 from coffeevania.common.game import GAME_WIDTH
+from coffeevania.game.camera import Camera
 from coffeevania.game_objects.basic import CoffeevaniaEntity
+from coffeevania.game_objects.basic import Player
 
 BASE_DIR = Path(__file__).parent.parent.parent.parent
 
@@ -21,22 +24,29 @@ class App:
         self.entities: List[CoffeevaniaEntity] = []
         self.context = GlobalContext(app=self)
 
-        # Load image banks
-        pyxel.images[0].load(0, 0, str(BASE_DIR / "assets/player/player_idle.png"))
+        self.camera: Optional[Camera] = None
 
     def update(self) -> None:
         for e in self.entities:
             e.update()
+
+        self.camera.update() # type: ignore
 
     def draw(self) -> None:
         pyxel.cls(0)
         for e in self.entities:
             e.draw()
 
+        self.camera.reset() # type: ignore
+
+        for e in self.entities:
+            e.draw_hud()
+
         if self.context.debug:
             pyxel.text(2, 2, "DEBUG BUILD", 3)
 
-    def run(self) -> None:
+    def run(self, player_inst: Player) -> None:
+        self.camera = Camera(player_inst, (CAMERA_PADDING_X, CAMERA_PADDING_Y))
         pyxel.run(self.update, self.draw)
 
     def create_entity(

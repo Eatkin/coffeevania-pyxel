@@ -13,6 +13,43 @@ from coffeevania.game.graphics import SpriteData
 
 
 @dataclass
+class StaticSprite:
+    sprite_name: str
+    xscale: Literal[-1, 1] = 1
+    yscale: Literal[-1, 1] = 1
+
+    def __post_init__(self) -> None:
+        if self.sprite_name not in SPRITE_DATA:
+            raise ValueError(
+                f"Error: Requested sprite {self.sprite_name} but is not available in"
+                " data"
+            )
+
+    @property
+    def sprite_data(self) -> SpriteData:
+        return SPRITE_DATA[self.sprite_name]
+
+    @property
+    def animation_length(self) -> int:
+        return self.sprite_data.width // GRID_SIZE
+
+    def draw(self, position: Position) -> None:
+        bank = self.sprite_data.bank
+        x = self.sprite_data.x
+        y = self.sprite_data.y
+        pyxel.blt(
+            position.x,
+            position.y,
+            bank,
+            x,
+            y,
+            GRID_SIZE * self.xscale,
+            GRID_SIZE * self.yscale,
+            0,
+        )
+
+
+@dataclass
 class Animation:
     sprite_name: str
     frame_duration: int = 6
