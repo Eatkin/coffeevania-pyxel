@@ -2,6 +2,7 @@ from typing import Any
 from typing import List
 from typing import Optional
 from typing import Tuple
+from typing import Type
 
 import pyxel
 
@@ -42,6 +43,9 @@ class Entity:
     def draw_hud(self) -> None:
         pass
 
+    def destroy(self) -> None:
+        pass
+
 
 class CoffeevaniaEntity(Entity):
     REQUIRED: Tuple[str, ...] = ()
@@ -63,6 +67,16 @@ class CoffeevaniaEntity(Entity):
     def speed_factor(self) -> float:
         return 1 / self.context.time_dilation
 
+    def destroy(self) -> None:
+        self.context.destroy_entity(self)
+        del self
+
+
+class Hazard(CoffeevaniaEntity):
+    """Hazard base class for anything that will kill player"""
+    position: Position
+    collision: CollisionRectangle
+
 
 class Player(CoffeevaniaEntity):
     position: Position
@@ -83,6 +97,9 @@ class Player(CoffeevaniaEntity):
         self.animator = Animator(
             animation_data=animation_data, starting_state=self.state, frame_duration=4
         )
+
+        # Copy start position for checkpoint
+        self.checkpoint_pos = Position(self.position.x, self.position.y)
 
     @property
     def blocks(self) -> List[Collidable]:
@@ -147,6 +164,17 @@ class Player(CoffeevaniaEntity):
             self.velocity.max_yspeed,
         )
 
+        # Check if collided with coffee
+        coffee = self.place_meeting(Coffee)
+        if coffee:
+            self.context.time_dilation *= 2
+            coffee.destroy()
+
+        # Check if we hit a hazard
+        hazard = self.place_meeting(Hazard)
+        if hazard:
+            self.die()
+
         if self.debug:
             self.debug_controls()
 
@@ -160,9 +188,22 @@ class Player(CoffeevaniaEntity):
             pyxel.text(
                 self.position.x + 8,
                 self.position.y,
-                str(self.animator.animation.sprite_data.bank),
+                str(self.context.time_dilation),
                 3,
             )
+
+    def place_meeting(self, other: Type[Collidable]) -> Optional[Collidable]:
+        for e in self.context.collidables:
+            if isinstance(e, other):
+                if overlaps(self, e):
+                    return e
+
+        return None
+
+    def die(self) -> None:
+        # Go back to checkpoint!
+        self.position.x = self.checkpoint_pos.x
+        self.position.y = self.checkpoint_pos.y
 
     def _is_grounded(self) -> bool:
         self.position.y += 1
@@ -209,10 +250,10 @@ class Coffee(CoffeevaniaEntity):
         self.collision = CollisionRectangle(8, 8, solid=False)
 
         # Bob up and down
-        self.offset = 0
-        self.offset_max = 3
-        self.offset_timer = 0
-        self.offset_timer_max = 120
+        self.offset = 0.0
+        self.offset_max = 3.0
+        self.offset_timer = 0.0
+        self.offset_timer_max = 120.0
 
     def update(self) -> None:
         self.offset_timer += 1 * self.speed_factor

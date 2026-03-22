@@ -8,6 +8,9 @@ class Collidable(Protocol):
     position: Position
     collision: CollisionRectangle
 
+    def destroy(self) -> None:
+        pass
+
 
 def overlaps(a: Collidable, b: Collidable) -> bool:
     return (

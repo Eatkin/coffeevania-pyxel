@@ -29,3 +29,9 @@ class GlobalContext:
         return cast(
             List[Collidable], [e for e in self.entity_list if hasattr(e, "collision")]
         )
+
+    def destroy_entity(self, e) -> None:
+        try:
+            self.app.entities.remove(e)
+        except ValueError:
+            return
