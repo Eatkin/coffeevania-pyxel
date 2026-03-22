@@ -33,7 +33,7 @@ class App:
         self.camera.update() # type: ignore
 
     def draw(self) -> None:
-        pyxel.cls(0)
+        pyxel.cls(pyxel.COLOR_DARK_BLUE)
         for e in self.entities:
             e.draw()
 

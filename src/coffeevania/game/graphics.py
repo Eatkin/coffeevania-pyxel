@@ -10,6 +10,7 @@ from coffeevania.common import ASSETS_PATH
 
 SPRITE_DATA: Dict[str, SpriteData] = {}
 GRID_SIZE = 8
+TRANSPARENT_COLOUR = pyxel.COLOR_WHITE
 
 @dataclass
 class SpriteData:

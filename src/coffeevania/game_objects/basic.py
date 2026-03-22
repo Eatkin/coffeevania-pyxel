@@ -73,7 +73,7 @@ class Player(CoffeevaniaEntity):
         self.velocity = Velocity(max_xspeed=2, max_yspeed=8)
         self.jump_force = 8
         self.state = CatState.IDLE
-        animation_data = {CatState.IDLE: "PlayerIdle", CatState.RUNNING: "PlayerMove"}
+        animation_data = {CatState.IDLE: "PlayerIdle", CatState.RUNNING: "PlayerMove", CatState.JUMPING: "PlayerJump", CatState.FALLING: "PlayerFall"}
         self.animator = Animator(
             animation_data=animation_data, starting_state=self.state, frame_duration=4
         )

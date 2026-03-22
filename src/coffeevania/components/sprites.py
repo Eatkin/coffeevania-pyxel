@@ -7,7 +7,7 @@ import pyxel
 
 from coffeevania.components import Component
 from coffeevania.components.position import Position
-from coffeevania.game.graphics import GRID_SIZE
+from coffeevania.game.graphics import GRID_SIZE, TRANSPARENT_COLOUR
 from coffeevania.game.graphics import SPRITE_DATA
 from coffeevania.game.graphics import SpriteData
 
@@ -45,7 +45,7 @@ class StaticSprite:
             y,
             GRID_SIZE * self.xscale,
             GRID_SIZE * self.yscale,
-            0,
+            TRANSPARENT_COLOUR,
         )
 
 
@@ -95,7 +95,7 @@ class Animation:
             y,
             GRID_SIZE * self.xscale,
             GRID_SIZE * self.yscale,
-            0,
+            TRANSPARENT_COLOUR,
         )
 
 

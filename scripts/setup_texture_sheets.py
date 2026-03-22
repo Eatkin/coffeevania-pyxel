@@ -33,7 +33,7 @@ for i in range(3):
     IMAGE_BANK_CELLS.append(_bank[:])
 
 IMAGE_BANK_ATLAS: List[Image.Image] = [
-    Image.new(mode="RGBA", size=(256, 256)) for _ in range(3)
+    Image.new(mode="RGBA", size=(256, 256), color=(238, 238, 238)) for _ in range(3)
 ]
 
 
@@ -67,8 +67,7 @@ def set_atlas(cells: Dict[str, int], im: Image.Image) -> None:
     sheet = IMAGE_BANK_ATLAS[cells["bank"]]
     x = cells["cell_x"] * GRID_SIZE
     y = cells["cell_y"] * GRID_SIZE
-    sheet.paste(im, (x, y))
-
+    sheet.paste(im, (x, y), mask=im.split()[3])
 
 def update_image_data(
     cells: Dict[str, int], sprite_filename: str, sprite_size: Tuple[int, int]
@@ -106,6 +105,7 @@ def main() -> None:
             continue
         print("Placing sprite", sprite)
         im = Image.open(sprite)
+
         dim = im.size
         h_cells = dim[0] // GRID_SIZE
         v_cells = dim[1] // GRID_SIZE
