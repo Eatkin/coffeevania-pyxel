@@ -11,6 +11,7 @@ from coffeevania.components.collision import CollisionRectangle
 from coffeevania.components.common import REQUIRED_COMPONENTS
 from coffeevania.components.position import Position
 from coffeevania.components.sprites import Animator
+from coffeevania.components.sprites import StaticSprite
 from coffeevania.components.velocity import Velocity
 from coffeevania.game.states import CatState
 from coffeevania.handlers.input import Action
@@ -73,7 +74,12 @@ class Player(CoffeevaniaEntity):
         self.velocity = Velocity(max_xspeed=2, max_yspeed=8)
         self.jump_force = 8
         self.state = CatState.IDLE
-        animation_data = {CatState.IDLE: "PlayerIdle", CatState.RUNNING: "PlayerMove", CatState.JUMPING: "PlayerJump", CatState.FALLING: "PlayerFall"}
+        animation_data = {
+            CatState.IDLE: "PlayerIdle",
+            CatState.RUNNING: "PlayerMove",
+            CatState.JUMPING: "PlayerJump",
+            CatState.FALLING: "PlayerFall",
+        }
         self.animator = Animator(
             animation_data=animation_data, starting_state=self.state, frame_duration=4
         )
@@ -190,3 +196,32 @@ class Block(CoffeevaniaEntity):
 
     def draw(self) -> None:
         pyxel.rect(self.position.x, self.position.y, 8, 8, 1)
+
+
+class Coffee(CoffeevaniaEntity):
+    position: Position
+    collision: CollisionRectangle
+    REQUIRED = ("position",)
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.sprite = StaticSprite("Coffee")
+        self.collision = CollisionRectangle(8, 8, solid=False)
+
+        # Bob up and down
+        self.offset = 0
+        self.offset_max = 3
+        self.offset_timer = 0
+        self.offset_timer_max = 120
+
+    def update(self) -> None:
+        self.offset_timer += 1 * self.speed_factor
+        self.offset = self.offset_max * pyxel.sin(
+            360 * self.offset_timer / self.offset_timer_max
+        )
+
+        if self.offset_timer >= self.offset_timer_max:
+            self.offset_timer = 0
+
+    def draw(self) -> None:
+        self.sprite.draw(Position(self.position.x, self.position.y + self.offset))

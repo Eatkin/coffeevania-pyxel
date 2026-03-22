@@ -12,6 +12,7 @@ from coffeevania.common.game import GAME_WIDTH
 from coffeevania.game.camera import Camera
 from coffeevania.game_objects.basic import CoffeevaniaEntity
 from coffeevania.game_objects.basic import Player
+from coffeevania.game.level_parser import load_level
 
 BASE_DIR = Path(__file__).parent.parent.parent.parent
 
@@ -25,6 +26,15 @@ class App:
         self.context = GlobalContext(app=self)
 
         self.camera: Optional[Camera] = None
+
+        level = "level1"
+        load_level(level, self.context)
+        # Find player
+        try:
+            player = next(e for e in self.context.entity_list if isinstance(e, Player))
+        except StopIteration:
+            raise RuntimeError(f"Level loaded with no available player object - add player to level {level}")
+        self.run(player)
 
     def update(self) -> None:
         for e in self.entities:
