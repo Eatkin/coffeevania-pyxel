@@ -72,12 +72,6 @@ class CoffeevaniaEntity(Entity):
         del self
 
 
-class Hazard(CoffeevaniaEntity):
-    """Hazard base class for anything that will kill player"""
-    position: Position
-    collision: CollisionRectangle
-
-
 class Player(CoffeevaniaEntity):
     position: Position
     REQUIRED = ("position",)
@@ -169,11 +163,6 @@ class Player(CoffeevaniaEntity):
         if coffee:
             self.context.time_dilation *= 2
             coffee.destroy()
-
-        # Check if we hit a hazard
-        hazard = self.place_meeting(Hazard)
-        if hazard:
-            self.die()
 
         if self.debug:
             self.debug_controls()

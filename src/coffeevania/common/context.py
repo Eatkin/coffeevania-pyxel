@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from dataclasses import field
 from typing import TYPE_CHECKING
 from typing import List
+from typing import Optional
 from typing import cast
 
 from coffeevania.handlers.input import InputHandler
@@ -10,6 +13,7 @@ from coffeevania.utils import Collidable
 if TYPE_CHECKING:
     from coffeevania.game import App
     from coffeevania.game_objects.basic import CoffeevaniaEntity
+    from coffeevania.game_objects.basic import Player
 
 
 @dataclass
@@ -19,6 +23,7 @@ class GlobalContext:
     input_handler: InputHandler = field(default_factory=InputHandler)
     gravity: float = 1.4
     debug: bool = True
+    player: Optional[Player] = None
 
     @property
     def entity_list(self) -> List["CoffeevaniaEntity"]:

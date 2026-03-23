@@ -32,6 +32,7 @@ class App:
         # Find player
         try:
             player = next(e for e in self.context.entity_list if isinstance(e, Player))
+            self.context.player = player
         except StopIteration:
             raise RuntimeError(f"Level loaded with no available player object - add player to level {level}")
         self.run(player)
