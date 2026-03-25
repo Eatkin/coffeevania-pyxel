@@ -14,6 +14,9 @@ from coffeevania.components.position import Position
 from coffeevania.components.sprites import Animator
 from coffeevania.components.sprites import StaticSprite
 from coffeevania.components.velocity import Velocity
+from coffeevania.game.graphics import GRID_SIZE
+from coffeevania.game.graphics import SPRITE_DATA
+from coffeevania.game.graphics import TRANSPARENT_COLOUR
 from coffeevania.game.states import CatState
 from coffeevania.handlers.input import Action
 from coffeevania.utils import Collidable
@@ -33,7 +36,7 @@ class Entity:
             if not hasattr(self, c):
                 component = cls()
                 setattr(self, c, component)
-    
+
     def post_init(self) -> None:
         pass
 
@@ -237,9 +240,49 @@ class Block(CoffeevaniaEntity):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.collision = CollisionRectangle(8, 8, solid=True)
+        self.sprite_resource = SPRITE_DATA["GrassTiles"]
+        self.sprite_draw_offset = 0
+
+    def post_init(self) -> None:
+        x, y = self.position.x, self.position.y
+        bits = 0
+        
+        checks = [
+            (0, -GRID_SIZE, 1),   # N = 1
+            (GRID_SIZE, 0, 2),    # E = 2
+            (0, GRID_SIZE, 4),    # S = 4
+            (-GRID_SIZE, 0, 8),   # W = 8
+        ]
+        
+        for dx, dy, bit in checks:
+            self.position.x = x + dx
+            self.position.y = y + dy
+            if self.place_meeting(Block):
+                bits |= bit
+        
+        self.position.x = x
+        self.position.y = y
+        self.sprite_draw_offset = GRID_SIZE * bits
+
+    def place_meeting(self, other: Type[Collidable]) -> Optional[Collidable]:
+        for e in self.context.collidables:
+            if isinstance(e, other) and e is not self:
+                if overlaps(self, e):
+                    return e
+
+        return None
 
     def draw(self) -> None:
-        pyxel.rect(self.position.x, self.position.y, 8, 8, 1)
+        pyxel.blt(
+            self.position.x,
+            self.position.y,
+            self.sprite_resource.bank,
+            self.sprite_resource.x + self.sprite_draw_offset,
+            self.sprite_resource.y,
+            GRID_SIZE,
+            GRID_SIZE,
+            TRANSPARENT_COLOUR,
+        )
 
 
 class Coffee(CoffeevaniaEntity):

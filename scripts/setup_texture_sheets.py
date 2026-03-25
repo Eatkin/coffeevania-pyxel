@@ -9,6 +9,7 @@ from typing import List
 from typing import Tuple
 
 from PIL import Image
+from pyxel import ceil
 
 from coffeevania.game.graphics import SpriteData
 from coffeevania.common import ASSETS_PATH
@@ -107,8 +108,8 @@ def main() -> None:
         im = Image.open(sprite)
 
         dim = im.size
-        h_cells = dim[0] // GRID_SIZE
-        v_cells = dim[1] // GRID_SIZE
+        h_cells = ceil(dim[0] / GRID_SIZE)
+        v_cells = ceil(dim[1] / GRID_SIZE)
         cells = find_image_bank_space(h_cells, v_cells)
         reserve_cells(cells, h_cells, v_cells)
         set_atlas(cells, im)

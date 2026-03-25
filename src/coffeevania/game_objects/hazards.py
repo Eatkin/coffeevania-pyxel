@@ -160,6 +160,7 @@ class Bullet(Hazard):
         self.velocity = Velocity(
             xspeed=speed * pyxel.cos(angle), yspeed=-speed * pyxel.sin(angle)
         )
+        self.sprite = StaticSprite(sprite_name="Bullet")
 
     def update(self) -> None:
         self.position_history.x = self.position.x
@@ -179,14 +180,7 @@ class Bullet(Hazard):
         super().update()
 
     def draw(self) -> None:
-        r = 2
-        pyxel.circ(
-            self.position.x + GRID_SIZE // 2,
-            self.position.y + GRID_SIZE // 2,
-            r,
-            pyxel.COLOR_ORANGE,
-        )
-
+        self.sprite.draw(Position(self.position.x + 2, self.position.y + 2))
 
 class BouncingHazard(Hazard):
     position: Position

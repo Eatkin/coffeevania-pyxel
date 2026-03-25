@@ -1,42 +1,56 @@
 {
-  "PlayerFall": {
+  "GrassTiles": {
     "bank": 0,
     "x": 0,
+    "y": 0,
+    "width": 128,
+    "height": 8
+  },
+  "PlayerFall": {
+    "bank": 0,
+    "x": 128,
     "y": 0,
     "width": 8,
     "height": 8
   },
   "PlayerJump": {
     "bank": 0,
-    "x": 8,
+    "x": 136,
     "y": 0,
     "width": 8,
     "height": 8
   },
   "PlayerMove": {
     "bank": 0,
-    "x": 16,
+    "x": 144,
     "y": 0,
     "width": 32,
     "height": 8
   },
   "PlayerIdle": {
     "bank": 0,
-    "x": 48,
+    "x": 176,
     "y": 0,
     "width": 32,
     "height": 8
   },
   "Spike": {
     "bank": 0,
-    "x": 80,
+    "x": 208,
     "y": 0,
     "width": 8,
     "height": 8
   },
+  "Bullet": {
+    "bank": 0,
+    "x": 216,
+    "y": 0,
+    "width": 4,
+    "height": 4
+  },
   "Coffee": {
     "bank": 0,
-    "x": 88,
+    "x": 224,
     "y": 0,
     "width": 8,
     "height": 8
