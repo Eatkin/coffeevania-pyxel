@@ -27,9 +27,16 @@
     "width": 32,
     "height": 8
   },
-  "Coffee": {
+  "Spike": {
     "bank": 0,
     "x": 80,
+    "y": 0,
+    "width": 8,
+    "height": 8
+  },
+  "Coffee": {
+    "bank": 0,
+    "x": 88,
     "y": 0,
     "width": 8,
     "height": 8

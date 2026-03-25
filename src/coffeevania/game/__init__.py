@@ -7,12 +7,14 @@ from typing import Type
 import pyxel
 
 from coffeevania.common.context import GlobalContext
-from coffeevania.common.game import CAMERA_PADDING_X, CAMERA_PADDING_Y, GAME_HEIGHT
+from coffeevania.common.game import CAMERA_PADDING_X
+from coffeevania.common.game import CAMERA_PADDING_Y
+from coffeevania.common.game import GAME_HEIGHT
 from coffeevania.common.game import GAME_WIDTH
 from coffeevania.game.camera import Camera
+from coffeevania.game.level_parser import load_world
 from coffeevania.game_objects.basic import CoffeevaniaEntity
 from coffeevania.game_objects.basic import Player
-from coffeevania.game.level_parser import load_level
 
 BASE_DIR = Path(__file__).parent.parent.parent.parent
 
@@ -27,28 +29,30 @@ class App:
 
         self.camera: Optional[Camera] = None
 
-        level = "level1"
-        load_level(level, self.context)
+        load_world(self.context)
         # Find player
         try:
             player = next(e for e in self.context.entity_list if isinstance(e, Player))
             self.context.player = player
         except StopIteration:
-            raise RuntimeError(f"Level loaded with no available player object - add player to level {level}")
+            raise RuntimeError(
+                "World loaded with no available player object - add player to the"
+                " game!!"
+            )
         self.run(player)
 
     def update(self) -> None:
         for e in self.entities:
             e.update()
 
-        self.camera.update() # type: ignore
+        self.camera.update()  # type: ignore
 
     def draw(self) -> None:
         pyxel.cls(pyxel.COLOR_DARK_BLUE)
         for e in self.entities:
             e.draw()
 
-        self.camera.reset() # type: ignore
+        self.camera.reset()  # type: ignore
 
         for e in self.entities:
             e.draw_hud()
@@ -67,3 +71,7 @@ class App:
         entity = entity_cls(context=self.context, *args, **kwargs)  # type: ignore
         self.entities.append(entity)
         return entity
+
+    def post_level_create(self) -> None:
+        for entity in self.entities:
+            entity.post_init()

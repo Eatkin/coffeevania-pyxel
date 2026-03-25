@@ -33,6 +33,9 @@ class Entity:
             if not hasattr(self, c):
                 component = cls()
                 setattr(self, c, component)
+    
+    def post_init(self) -> None:
+        pass
 
     def update(self) -> None:
         pass
@@ -79,6 +82,8 @@ class Player(CoffeevaniaEntity):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.collision = CollisionRectangle(8, 8)
+        # Hurtbox used for collision
+        self.hurtbox = CollisionRectangle(4, 4, 2, 2)
         self.velocity = Velocity(max_xspeed=2, max_yspeed=8)
         self.jump_force = 8
         self.state = CatState.IDLE
@@ -165,7 +170,7 @@ class Player(CoffeevaniaEntity):
             coffee.destroy()
 
         if self.debug:
-            self.debug_controls()
+            self._debug_controls()
 
         self._update_state()
         self.animator.update(self.state)
@@ -174,12 +179,7 @@ class Player(CoffeevaniaEntity):
     def draw(self) -> None:
         self.animator.draw(position=self.position)
         if self.debug:
-            pyxel.text(
-                self.position.x + 8,
-                self.position.y,
-                str(self.context.time_dilation),
-                3,
-            )
+            self._debug_draw()
 
     def place_meeting(self, other: Type[Collidable]) -> Optional[Collidable]:
         for e in self.context.collidables:
@@ -210,9 +210,23 @@ class Player(CoffeevaniaEntity):
         else:
             self.state = CatState.IDLE
 
-    def debug_controls(self) -> None:
+    def _debug_controls(self) -> None:
         if self.context.input_handler.pressed(Action.DEBUG_DILATE):
             self.context.time_dilation *= 2
+
+    def _debug_draw(self) -> None:
+        pyxel.text(
+            self.position.x + 8,
+            self.position.y,
+            str(self.context.time_dilation),
+            3,
+        )
+        x = self.position.x + self.hurtbox.offset_x
+        y = self.position.y + self.hurtbox.offset_y
+        w = self.hurtbox.width
+        h = self.hurtbox.height
+
+        pyxel.rect(x, y, w, h, pyxel.COLOR_RED)
 
 
 class Block(CoffeevaniaEntity):
