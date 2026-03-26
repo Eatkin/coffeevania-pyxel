@@ -52,7 +52,7 @@ class StaticSprite:
 @dataclass
 class Animation:
     sprite_name: str
-    frame_duration: int = 6
+    frame_duration: int = 12
     current_frame: int = 0
     timer: int = 0
     paused: bool = False

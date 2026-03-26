@@ -87,8 +87,8 @@ class Player(CoffeevaniaEntity):
         self.collision = CollisionRectangle(6, 7, 1, 1)
         # Hurtbox used for collision
         self.hurtbox = CollisionRectangle(4, 4, 2, 2)
-        self.velocity = Velocity(max_xspeed=2, max_yspeed=8)
-        self.jump_force = 8
+        self.velocity = Velocity(max_xspeed=1, max_yspeed=4)
+        self.jump_force = 4
         self.state = CatState.IDLE
         animation_data = {
             CatState.IDLE: "PlayerIdle",
@@ -97,7 +97,7 @@ class Player(CoffeevaniaEntity):
             CatState.FALLING: "PlayerFall",
         }
         self.animator = Animator(
-            animation_data=animation_data, starting_state=self.state, frame_duration=4
+            animation_data=animation_data, starting_state=self.state, frame_duration=8
         )
 
         # Copy start position for checkpoint

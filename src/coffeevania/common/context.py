@@ -21,7 +21,7 @@ class GlobalContext:
     app: "App"
     time_dilation: int = 1
     input_handler: InputHandler = field(default_factory=InputHandler)
-    gravity: float = 1.4
+    gravity: float = 0.4
     debug: bool = True
     player: Optional[Player] = None
 
