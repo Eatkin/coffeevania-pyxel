@@ -84,7 +84,7 @@ class Player(CoffeevaniaEntity):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.collision = CollisionRectangle(8, 8)
+        self.collision = CollisionRectangle(6, 7, 1, 1)
         # Hurtbox used for collision
         self.hurtbox = CollisionRectangle(4, 4, 2, 2)
         self.velocity = Velocity(max_xspeed=2, max_yspeed=8)
@@ -229,7 +229,7 @@ class Player(CoffeevaniaEntity):
         w = self.hurtbox.width
         h = self.hurtbox.height
 
-        pyxel.rect(x, y, w, h, pyxel.COLOR_RED)
+        # pyxel.rect(x, y, w, h, pyxel.COLOR_RED)
 
 
 class Block(CoffeevaniaEntity):

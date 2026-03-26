@@ -23,7 +23,7 @@ class App:
     def __init__(
         self, game_width: int = GAME_WIDTH, game_height: int = GAME_HEIGHT
     ) -> None:
-        pyxel.init(game_width, game_height)
+        pyxel.init(game_width, game_height, fps=60)
         self.entities: List[CoffeevaniaEntity] = []
         self.context = GlobalContext(app=self)
 

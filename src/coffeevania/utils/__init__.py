@@ -29,10 +29,10 @@ class Collidable(Protocol):
 def overlaps(a: Collidable, b: Collidable) -> bool:
     """Checks if two instances are colliding"""
     return (
-        a.position.x < b.position.x + b.collision.width
-        and a.position.x + a.collision.width > b.position.x
-        and a.position.y < b.position.y + b.collision.height
-        and a.position.y + a.collision.height > b.position.y
+        a.position.x + a.collision.offset_x < b.position.x + b.collision.width + b.collision.offset_x
+        and a.position.x + a.collision.offset_x + a.collision.width > b.position.x + b.collision.offset_x
+        and a.position.y + a.collision.offset_y < b.position.y + b.collision.height + b.collision.offset_y
+        and a.position.y + a.collision.offset_y + a.collision.height > b.position.y + b.collision.offset_y
     )
 
 
