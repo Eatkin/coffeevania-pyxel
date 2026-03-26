@@ -90,6 +90,8 @@ class Player(CoffeevaniaEntity):
         self.velocity = Velocity(max_xspeed=1, max_yspeed=4)
         self.jump_force = 4
         self.state = CatState.IDLE
+        self.time_in_air = 0
+        self.coyote_time_allowed = 10
         animation_data = {
             CatState.IDLE: "PlayerIdle",
             CatState.RUNNING: "PlayerMove",
@@ -152,8 +154,14 @@ class Player(CoffeevaniaEntity):
                 else pyxel.ceil(self.position.y)
             )
 
+        # Coyote time handler
+        if self._is_grounded():
+            self.time_in_air = 0
+        else:
+            self.time_in_air += 1
+
         # Jump + gravity
-        if self.context.input_handler.jump and self._is_grounded():
+        if self.context.input_handler.jump and self.time_in_air < self.coyote_time_allowed:
             self.velocity.yspeed = -self.jump_force
 
         # Acceleration due to gravity
@@ -215,7 +223,10 @@ class Player(CoffeevaniaEntity):
 
     def _debug_controls(self) -> None:
         if self.context.input_handler.pressed(Action.DEBUG_DILATE):
-            self.context.time_dilation *= 2
+            if self.context.input_handler.pressed(Action.MODIFY):
+                self.context.time_dilation //= 2
+            else:
+                self.context.time_dilation *= 2
 
     def _debug_draw(self) -> None:
         pyxel.text(
@@ -224,13 +235,6 @@ class Player(CoffeevaniaEntity):
             str(self.context.time_dilation),
             3,
         )
-        x = self.position.x + self.hurtbox.offset_x
-        y = self.position.y + self.hurtbox.offset_y
-        w = self.hurtbox.width
-        h = self.hurtbox.height
-
-        # pyxel.rect(x, y, w, h, pyxel.COLOR_RED)
-
 
 class Block(CoffeevaniaEntity):
     position: Position
@@ -299,7 +303,7 @@ class Coffee(CoffeevaniaEntity):
         self.offset = 0.0
         self.offset_max = 3.0
         self.offset_timer = 0.0
-        self.offset_timer_max = 120.0
+        self.offset_timer_max = 180.0
 
     def update(self) -> None:
         self.offset_timer += 1 * self.speed_factor

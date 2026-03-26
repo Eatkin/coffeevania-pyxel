@@ -11,6 +11,7 @@ class Action(Enum):
     MOVE_DOWN = auto()
     JUMP = auto()
     DEBUG_DILATE = auto()
+    MODIFY = auto()
 
 
 class InputHandler:
@@ -22,6 +23,7 @@ class InputHandler:
             Action.MOVE_DOWN: [pyxel.KEY_DOWN, pyxel.KEY_J],
             Action.JUMP: [pyxel.KEY_Z, pyxel.KEY_K],
             Action.DEBUG_DILATE: [pyxel.KEY_T],
+            Action.MODIFY: [pyxel.KEY_SHIFT],
         }
 
     def held(self, action: Action) -> bool:
