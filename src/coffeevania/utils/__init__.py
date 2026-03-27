@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING
+from typing import Protocol
+from typing import runtime_checkable
 
 from coffeevania.components.position import Position
-
 
 if TYPE_CHECKING:
     from coffeevania.components.collision import CollisionRectangle
@@ -18,21 +19,26 @@ class Rect:
     y2: float
 
 
+@runtime_checkable
 class Collidable(Protocol):
     position: Position
     collision: CollisionRectangle
 
-    def destroy(self) -> None:
-        pass
+    def is_on_screen(self) -> bool: ...
+    def destroy(self) -> None: ...
 
 
 def overlaps(a: Collidable, b: Collidable) -> bool:
     """Checks if two instances are colliding"""
     return (
-        a.position.x + a.collision.offset_x < b.position.x + b.collision.width + b.collision.offset_x
-        and a.position.x + a.collision.offset_x + a.collision.width > b.position.x + b.collision.offset_x
-        and a.position.y + a.collision.offset_y < b.position.y + b.collision.height + b.collision.offset_y
-        and a.position.y + a.collision.offset_y + a.collision.height > b.position.y + b.collision.offset_y
+        a.position.x + a.collision.offset_x
+        < b.position.x + b.collision.width + b.collision.offset_x
+        and a.position.x + a.collision.offset_x + a.collision.width
+        > b.position.x + b.collision.offset_x
+        and a.position.y + a.collision.offset_y
+        < b.position.y + b.collision.height + b.collision.offset_y
+        and a.position.y + a.collision.offset_y + a.collision.height
+        > b.position.y + b.collision.offset_y
     )
 
 

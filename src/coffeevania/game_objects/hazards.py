@@ -2,16 +2,17 @@ from __future__ import annotations
 
 import math
 from typing import Any
-from typing import List
 
 import pyxel
 
+from coffeevania.common.game import GAME_HEIGHT, GAME_WIDTH
 from coffeevania.components.collision import CollisionRectangle
 from coffeevania.components.position import Position
-from coffeevania.components.sprites import Animation, StaticSprite
+from coffeevania.components.sprites import Animation
+from coffeevania.components.sprites import StaticSprite
 from coffeevania.components.velocity import Velocity
+from coffeevania.game.graphics import GRID_SIZE
 from coffeevania.game_objects.basic import CoffeevaniaEntity
-from coffeevania.utils import Collidable
 from coffeevania.utils import Rect
 from coffeevania.utils import rects_overlap
 
@@ -45,6 +46,9 @@ class Hazard(CoffeevaniaEntity):
     def collided_with_player(self) -> bool:
         """Check if the region swept by hazard has intersected player"""
         if not self.context.player:
+            return False
+
+        if not self.is_on_screen():
             return False
 
         player_rect = self.context.player.hurtbox.get_rect(self.context.player.position)
@@ -95,35 +99,42 @@ class VerticalShooter(Hazard):
         self._calculate_bounds()
 
     def _calculate_bounds(self) -> None:
-        original_x = self.position.x
+        gx = int(self.position.x // GRID_SIZE)
+        gy = int(self.position.y // GRID_SIZE)
 
-        # Walk left until hitting a solid
-        while not any(
-            rects_overlap(
-                self.collision.get_rect(self.position), e.collision.get_rect(e.position)
-            )
-            for e in self.context.collidables
-            if e.collision.solid
-        ):
-            self.position.x -= 1
-        left_wall = self.position.x + 1
+        left_gx = gx
+        while (left_gx - 1, gy) not in self.context.collision_map:
+            left_gx -= 1
+            if left_gx < 0:
+                raise RuntimeError("You have an unbound vertical shooter")
 
-        # Walk right until hitting a solid
-        self.position.x = original_x
-        while not any(
-            rects_overlap(
-                self.collision.get_rect(self.position), e.collision.get_rect(e.position)
-            )
-            for e in self.context.collidables
-            if e.collision.solid
-        ):
-            self.position.x += 1
-        right_wall = self.position.x - 1
+        # Convert grid back to pixel (Left edge of current tile + offset)
+        left_wall = left_gx * GRID_SIZE - self.collision.offset_x
 
-        self.origin_x = (left_wall + right_wall) // 2
-        self.amplitude = (right_wall - left_wall) // 2
-        offset = (original_x - self.origin_x) / self.amplitude
-        self.timer = math.degrees(math.asin(offset)) / (self.speed * 360)
+        # 3. Look Right
+        right_gx = gx
+        while (right_gx + 1, gy) not in self.context.collision_map:
+            right_gx += 1
+            # Arbitrary break loop if I fuck something up
+            if right_gx > GAME_WIDTH * 100:
+                raise RuntimeError("You have an unbound vertical shooter")
+
+        # Convert grid back to pixel (Right edge of current tile - width - offset)
+        right_wall = (
+            (right_gx * GRID_SIZE)
+            + GRID_SIZE
+            - self.collision.width
+            - self.collision.offset_x
+        )
+
+        self.origin_x = (left_wall + right_wall) / 2
+        self.amplitude = (right_wall - left_wall) / 2
+
+        # Pre-calculate starting timer based on initial position
+        offset = (self.position.x - self.origin_x) / max(self.amplitude, 1)
+        # Clamp to avoid math domain errors in asin
+        offset = max(-1, min(1, offset))
+        self.timer = math.asin(offset) / (self.speed * 2 * math.pi)
 
     def update(self) -> None:
         self.timer += self.speed_factor
@@ -145,7 +156,7 @@ class VerticalShooter(Hazard):
         )
 
     def draw(self) -> None:
-        self.sprite.draw(Position(self.position.x, self.position.y-1))
+        self.sprite.draw(Position(self.position.x, self.position.y - 1))
 
 
 class Bullet(Hazard):
@@ -169,13 +180,22 @@ class Bullet(Hazard):
         self.position.x += self.velocity.xspeed * self.speed_factor
         self.position.y += self.velocity.yspeed * self.speed_factor
 
-        blocks = [e for e in self.context.collidables if e.collision.solid]
-        if any(
-            rects_overlap(self.swept_collision, e.collision.get_rect(e.position))
-            for e in blocks
-        ):
-            self.destroy()
-            return
+        diff_x = self.position.x - self.position_history.x
+        diff_y = self.position.y - self.position_history.y
+        dist = math.sqrt(diff_x**2 + diff_y**2)
+
+        # Steps to avoid 'phasing'
+        steps = int(dist // GRID_SIZE) + 1
+        for i in range(1, steps + 1):
+            t = i / steps
+            curr_x = self.position_history.x + diff_x * t
+            curr_y = self.position_history.y + diff_y * t
+
+            gx, gy = int(curr_x // GRID_SIZE), int(curr_y // GRID_SIZE)
+            if (gx, gy) in self.context.collision_map:
+                self.position.x, self.position.y = curr_x, curr_y
+                self.destroy()
+                return
 
         super().update()
 
@@ -200,11 +220,15 @@ class Saw(Hazard):
         self.velocity = Velocity(0, 0, 8, 0)
         self.speed = speed
 
-    @property
-    def blocks(self) -> List[Collidable]:
-        return [
-            e for e in self.context.collidables if e is not self and e.collision.solid
-        ]
+    def is_at_solid(self, x: float, y: float) -> bool:
+        left = (x + self.collision.offset_x) // GRID_SIZE
+        right = (x + self.collision.offset_x + self.collision.width - 1) // GRID_SIZE
+        top = (y + self.collision.offset_y) // GRID_SIZE
+
+        for gx in [int(left), int(right)]:
+            if (gx, int(top)) in self.context.collision_map:
+                    return True
+        return False
 
     def post_init(self) -> None:
         self.position_history.x = self.position.x
@@ -215,21 +239,32 @@ class Saw(Hazard):
 
         if self.context.player:
             dx = self.context.player.position.x - self.position.x
-            direction = 1 if dx > 0 else -1
+            direction = 1.0 if dx > 0 else -1.0
             self.velocity.xspeed = pyxel.clamp(
                 self.velocity.xspeed + direction * self.speed * self.speed_factor,
                 -self.velocity.max_xspeed,
                 self.velocity.max_xspeed,
             )
 
-        self.position.x += self.velocity.xspeed * self.speed_factor
-        if any(
-            rects_overlap(
-                self.collision.get_rect(self.position), e.collision.get_rect(e.position)
-            )
-            for e in self.blocks
-        ):
-            self.position.x -= self.velocity.xspeed * self.speed_factor
+        move_amount = self.velocity.xspeed * self.speed_factor
+        self.position.x += move_amount
+
+        if self.is_at_solid(self.position.x, self.position.y):
+            if move_amount > 0:
+                right_edge = (
+                    self.position.x + self.collision.offset_x + self.collision.width - 1
+                )
+                self.position.x = (
+                    (right_edge // GRID_SIZE) * GRID_SIZE
+                    - self.collision.width
+                    - self.collision.offset_x
+                )
+            else:
+                left_edge = self.position.x + self.collision.offset_x
+                self.position.x = (
+                    left_edge // GRID_SIZE + 1
+                ) * GRID_SIZE - self.collision.offset_x
+
             self.velocity.xspeed = 0
 
         direction = self.position.x - self.position_history.x

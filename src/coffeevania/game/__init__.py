@@ -1,6 +1,5 @@
 from pathlib import Path
-from typing import Any
-from typing import List
+from typing import Any, Set
 from typing import Optional
 from typing import Type
 
@@ -24,15 +23,19 @@ class App:
         self, game_width: int = GAME_WIDTH, game_height: int = GAME_HEIGHT
     ) -> None:
         pyxel.init(game_width, game_height, fps=60)
-        self.entities: List[CoffeevaniaEntity] = []
+        self.entities: Set[CoffeevaniaEntity] = set()
         self.context = GlobalContext(app=self)
 
         self.camera: Optional[Camera] = None
 
-        load_world(self.context)
+        block_map = load_world(self.context)
+        self.context.collision_map = block_map
+
+        self.post_level_create()
+
         # Find player
         try:
-            player = next(e for e in self.context.entity_list if isinstance(e, Player))
+            player = next(e for e in self.entities if isinstance(e, Player))
             self.context.player = player
         except StopIteration:
             raise RuntimeError(
@@ -42,7 +45,7 @@ class App:
         self.run(player)
 
     def update(self) -> None:
-        for e in self.entities:
+        for e in list(self.entities):
             e.update()
 
         self.camera.update()  # type: ignore
@@ -50,7 +53,8 @@ class App:
     def draw(self) -> None:
         pyxel.cls(pyxel.COLOR_DARK_BLUE)
         for e in self.entities:
-            e.draw()
+            if e.is_on_screen():
+                e.draw()
 
         self.camera.reset()  # type: ignore
 
@@ -69,7 +73,6 @@ class App:
     ) -> CoffeevaniaEntity:
         """Factory function to create entities"""
         entity = entity_cls(context=self.context, *args, **kwargs)  # type: ignore
-        self.entities.append(entity)
         return entity
 
     def post_level_create(self) -> None:

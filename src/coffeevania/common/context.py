@@ -3,40 +3,28 @@ from __future__ import annotations
 from dataclasses import dataclass
 from dataclasses import field
 from typing import TYPE_CHECKING
-from typing import List
+from typing import Dict
+from typing import Literal
 from typing import Optional
-from typing import cast
+from typing import Set
+from typing import Tuple
 
 from coffeevania.handlers.input import InputHandler
-from coffeevania.utils import Collidable
 
 if TYPE_CHECKING:
     from coffeevania.game import App
-    from coffeevania.game_objects.basic import CoffeevaniaEntity
+    from coffeevania.game_objects.basic import Collectible
     from coffeevania.game_objects.basic import Player
 
 
 @dataclass
 class GlobalContext:
-    app: "App"
-    time_dilation: int = 1
+    app: App
+    collidables: Set[Collectible] = field(default_factory=set)
+    collision_map: Dict[Tuple[int, int], Literal[0]] = field(default_factory=dict)
     input_handler: InputHandler = field(default_factory=InputHandler)
+    time_dilation: float = 1.0
     gravity: float = 0.4
     debug: bool = True
-    player: Optional[Player] = None
+    player: Optional["Player"] = None
 
-    @property
-    def entity_list(self) -> List["CoffeevaniaEntity"]:
-        return self.app.entities
-
-    @property
-    def collidables(self) -> List[Collidable]:
-        return cast(
-            List[Collidable], [e for e in self.entity_list if hasattr(e, "collision")]
-        )
-
-    def destroy_entity(self, e) -> None:
-        try:
-            self.app.entities.remove(e)
-        except ValueError:
-            return

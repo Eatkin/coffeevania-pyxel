@@ -1,5 +1,5 @@
 import csv
-from typing import Callable
+from typing import Callable, Literal, Tuple
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -53,7 +53,7 @@ def load_level(name: str, offset_x: int, offset_y: int, context: GlobalContext, 
                         legend[char](x * GRID_SIZE + offset_x, y * GRID_SIZE + offset_y)  # type: ignore
 
 
-def load_world(context: GlobalContext) -> None:
+def load_world(context: GlobalContext) -> Dict[Tuple[int, int], Literal[0]]:
     path = LEVELS_PATH / "layout.csv"
     layout: List[List[str]] = []
 
@@ -79,10 +79,14 @@ def load_world(context: GlobalContext) -> None:
             x_offset += chunk_width * GRID_SIZE
         y_offset += chunk_height * GRID_SIZE
 
+    collision_map: Dict[Tuple[int, int], Literal[0]] = {}
+
     # Create all the blocks
     legend = get_legend(context)
     for p in block_queue:
         legend["#"](p.x, p.y) # type: ignore
+        x_cell, y_cell = p.x // GRID_SIZE, p.y // GRID_SIZE
+        collision_map[(int(x_cell), int(y_cell))] = 0
 
 
-    context.app.post_level_create()
+    return collision_map

@@ -1,5 +1,4 @@
 from typing import Any
-from typing import List
 from typing import Optional
 from typing import Tuple
 from typing import Type
@@ -7,6 +6,8 @@ from typing import Type
 import pyxel
 
 from coffeevania.common.context import GlobalContext
+from coffeevania.common.game import GAME_HEIGHT
+from coffeevania.common.game import GAME_WIDTH
 from coffeevania.components import Component
 from coffeevania.components.collision import CollisionRectangle
 from coffeevania.components.common import REQUIRED_COMPONENTS
@@ -54,6 +55,7 @@ class Entity:
 
 
 class CoffeevaniaEntity(Entity):
+    position: Position
     REQUIRED: Tuple[str, ...] = ()
 
     def __init__(self, context: GlobalContext, *args: Any, **kwargs: Any) -> None:
@@ -65,6 +67,20 @@ class CoffeevaniaEntity(Entity):
                     f"{self.__class__.__name__} missing required component: {component}"
                 )
 
+        context.app.entities.add(self)
+
+    def is_on_screen(self) -> bool:
+        camera = self.context.app.camera
+        if not camera:
+            return True
+        cx, cy = camera.camera_x, camera.camera_y
+        return (
+            self.position.x < cx + GAME_WIDTH + GRID_SIZE
+            and self.position.x > cx - GRID_SIZE
+            and self.position.y < cy + GAME_HEIGHT + GRID_SIZE
+            and self.position.y > cy - GRID_SIZE
+        )
+
     @property
     def debug(self) -> bool:
         return self.context.debug
@@ -74,7 +90,22 @@ class CoffeevaniaEntity(Entity):
         return 1 / self.context.time_dilation
 
     def destroy(self) -> None:
-        self.context.destroy_entity(self)
+        self.context.app.entities.remove(self)
+        del self
+
+
+class Collectible(CoffeevaniaEntity):
+    """Container class"""
+    collision: CollisionRectangle
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        # We add ourselves to collidables
+        super().__init__(*args, **kwargs)
+        self.context.collidables.add(self)
+
+    def destroy(self) -> None:
+        self.context.app.entities.remove(self)
+        self.context.collidables.remove(self)
         del self
 
 
@@ -105,11 +136,17 @@ class Player(CoffeevaniaEntity):
         # Copy start position for checkpoint
         self.checkpoint_pos = Position(self.position.x, self.position.y)
 
-    @property
-    def blocks(self) -> List[Collidable]:
-        return [
-            e for e in self.context.collidables if e is not self and e.collision.solid
-        ]
+    def is_at_solid(self, x: float, y: float) -> bool:
+        left = (x + self.collision.offset_x) // GRID_SIZE
+        right = (x + self.collision.offset_x + self.collision.width - 1) // GRID_SIZE
+        top = (y + self.collision.offset_y) // GRID_SIZE
+        bottom = (y + self.collision.offset_y + self.collision.height - 1) // GRID_SIZE
+
+        for gx in [int(left), int(right)]:
+            for gy in [int(top), int(bottom)]:
+                if (gx, gy) in self.context.collision_map:
+                    return True
+        return False
 
     def update(self) -> None:
         hinput = self.context.input_handler.hinput
@@ -123,36 +160,54 @@ class Player(CoffeevaniaEntity):
         )
 
         # X axis
-        self.position.x += self.velocity.xspeed
-        if any(overlaps(self, b) for b in self.blocks):
-            self.position.x -= self.velocity.xspeed
-            step = 1 if self.velocity.xspeed > 0 else -1
-            while not any(overlaps(self, b) for b in self.blocks):
-                self.position.x += step
-            self.position.x -= step
-            self.velocity.xspeed = 0
-            # Round in the direction of step
-            self.position.x = (
-                pyxel.floor(self.position.x)
-                if step == -1
-                else pyxel.ceil(self.position.x)
-            )
+        if self.velocity.xspeed != 0:
+            self.position.x += self.velocity.xspeed
 
-        # Y axis - hold jump for lower gravity i.e. higher jump
-        self.position.y += self.velocity.yspeed
-        if any(overlaps(self, b) for b in self.blocks):
-            self.position.y -= self.velocity.yspeed
-            step = 1 if self.velocity.yspeed > 0 else -1
-            while not any(overlaps(self, b) for b in self.blocks):
-                self.position.y += step
-            self.position.y -= step
-            self.velocity.yspeed = 0
-            # Round in the direction of step
-            self.position.y = (
-                pyxel.floor(self.position.y)
-                if step == -1
-                else pyxel.ceil(self.position.y)
-            )
+            if self.is_at_solid(self.position.x, self.position.y):
+                if self.velocity.xspeed > 0:
+                    right_edge = (
+                        self.position.x
+                        + self.collision.offset_x
+                        + self.collision.width
+                        - 1
+                    )
+                    self.position.x = (
+                        (right_edge // GRID_SIZE) * GRID_SIZE
+                        - self.collision.width
+                        - self.collision.offset_x
+                    )
+                else:
+                    left_edge = self.position.x + self.collision.offset_x
+                    self.position.x = (
+                        left_edge // GRID_SIZE + 1
+                    ) * GRID_SIZE - self.collision.offset_x
+
+                self.velocity.xspeed = 0
+
+        # Y axis
+        if self.velocity.yspeed != 0:
+            self.position.y += self.velocity.yspeed
+
+            if self.is_at_solid(self.position.x, self.position.y):
+                if self.velocity.yspeed > 0:
+                    foot_pos = (
+                        self.position.y
+                        + self.collision.offset_y
+                        + self.collision.height
+                        - 1
+                    )
+                    self.position.y = (
+                        (foot_pos // GRID_SIZE) * GRID_SIZE
+                        - self.collision.height
+                        - self.collision.offset_y
+                    )
+                else:
+                    head_pos = self.position.y + self.collision.offset_y
+                    self.position.y = (
+                        head_pos // GRID_SIZE + 1
+                    ) * GRID_SIZE - self.collision.offset_y
+
+                self.velocity.yspeed = 0
 
         # Coyote time handler
         if self._is_grounded():
@@ -161,18 +216,23 @@ class Player(CoffeevaniaEntity):
             self.time_in_air += 1
 
         # Jump + gravity
-        if self.context.input_handler.jump and self.time_in_air < self.coyote_time_allowed:
+        # Hold jump for higher jump
+        if (
+            self.context.input_handler.jump
+            and self.time_in_air < self.coyote_time_allowed
+        ):
             self.velocity.yspeed = -self.jump_force
 
         # Acceleration due to gravity
         # Allow holding jump to lessen effects of gravity
-        self.velocity.yspeed = clamp(
-            self.velocity.yspeed
-            + self.context.gravity
-            * (1 - 0.4 * self.context.input_handler.held(Action.JUMP)),
-            -self.velocity.max_yspeed,
-            self.velocity.max_yspeed,
-        )
+        if not self._is_grounded():
+            self.velocity.yspeed = clamp(
+                self.velocity.yspeed
+                + self.context.gravity
+                * (1 - 0.4 * self.context.input_handler.held(Action.JUMP)),
+                -self.velocity.max_yspeed,
+                self.velocity.max_yspeed,
+            )
 
         # Check if collided with coffee
         coffee = self.place_meeting(Coffee)
@@ -206,10 +266,7 @@ class Player(CoffeevaniaEntity):
         self.position.y = self.checkpoint_pos.y
 
     def _is_grounded(self) -> bool:
-        self.position.y += 1
-        grounded = any(overlaps(self, b) for b in self.blocks)
-        self.position.y -= 1
-        return bool(grounded)
+        return self.is_at_solid(self.position.x, self.position.y + 1)
 
     def _update_state(self) -> None:
         if not self._is_grounded():
@@ -236,9 +293,9 @@ class Player(CoffeevaniaEntity):
             3,
         )
 
+
 class Block(CoffeevaniaEntity):
     position: Position
-    collision: CollisionRectangle
     REQUIRED = ("position",)
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -248,33 +305,23 @@ class Block(CoffeevaniaEntity):
         self.sprite_draw_offset = 0
 
     def post_init(self) -> None:
-        x, y = self.position.x, self.position.y
+        gx, gy = int(self.position.x // GRID_SIZE), int(self.position.y // GRID_SIZE)
         bits = 0
-        
-        checks = [
-            (0, -GRID_SIZE, 1),   # N = 1
-            (GRID_SIZE, 0, 2),    # E = 2
-            (0, GRID_SIZE, 4),    # S = 4
-            (-GRID_SIZE, 0, 8),   # W = 8
+
+        # Neighbor relative offsets: (dx, dy, bit_value)
+        # North=1, East=2, South=4, West=8
+        neighbors = [
+            (0, -1, 1),  # N
+            (1, 0, 2),  # E
+            (0, 1, 4),  # S
+            (-1, 0, 8),  # W
         ]
-        
-        for dx, dy, bit in checks:
-            self.position.x = x + dx
-            self.position.y = y + dy
-            if self.place_meeting(Block):
+
+        for dx, dy, bit in neighbors:
+            if (gx + dx, gy + dy) in self.context.collision_map:
                 bits |= bit
-        
-        self.position.x = x
-        self.position.y = y
+
         self.sprite_draw_offset = GRID_SIZE * bits
-
-    def place_meeting(self, other: Type[Collidable]) -> Optional[Collidable]:
-        for e in self.context.collidables:
-            if isinstance(e, other) and e is not self:
-                if overlaps(self, e):
-                    return e
-
-        return None
 
     def draw(self) -> None:
         pyxel.blt(
@@ -289,7 +336,7 @@ class Block(CoffeevaniaEntity):
         )
 
 
-class Coffee(CoffeevaniaEntity):
+class Coffee(Collectible):
     position: Position
     collision: CollisionRectangle
     REQUIRED = ("position",)
