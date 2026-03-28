@@ -6,10 +6,19 @@ chunk_width, chunk_height = 45, 12
 layout: List[List[str]] = []
 
 with open("assets/levels/super-level.txt", "r") as f:
-    level_text = f.read().split("\n")
+    level_text = [line for line in f.read().split("\n") if line.strip()]
 
-chunks_wide = len(level_text[0]) // chunk_width
-chunks_tall = len(level_text) // chunk_height
+world_width = len(level_text[0])
+world_height = len(level_text)
+chunks_wide = world_width // chunk_width
+chunks_tall = world_height // chunk_height
+
+rw = world_width % chunk_width
+rh = world_height % chunk_height
+
+if rw != 0 or rh != 0:
+    print("WARNING: Chunk width / height is not correct - remainders - rw:", rw, ", rh:", rh)
+    print("Actual width:", world_width, ", actual height:", world_height)
 
 level_chunks: List[str] = []
 

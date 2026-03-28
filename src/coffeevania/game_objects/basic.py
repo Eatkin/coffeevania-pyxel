@@ -1,7 +1,7 @@
 from typing import Any
+from typing import Dict
 from typing import Optional
 from typing import Tuple
-from typing import Type
 
 import pyxel
 
@@ -20,7 +20,6 @@ from coffeevania.game.graphics import SPRITE_DATA
 from coffeevania.game.graphics import TRANSPARENT_COLOUR
 from coffeevania.game.states import CatState
 from coffeevania.handlers.input import Action
-from coffeevania.utils import Collidable
 from coffeevania.utils import clamp
 from coffeevania.utils import lerp
 from coffeevania.utils import overlaps
@@ -96,6 +95,7 @@ class CoffeevaniaEntity(Entity):
 
 class Collectible(CoffeevaniaEntity):
     """Container class"""
+
     collision: CollisionRectangle
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -107,6 +107,40 @@ class Collectible(CoffeevaniaEntity):
         self.context.app.entities.remove(self)
         self.context.collidables.remove(self)
         del self
+
+
+class PlayerGhost(CoffeevaniaEntity):
+    position: Position
+    REQUIRED = ("position",)
+
+    def __init__(
+        self,
+        animation_data: Dict[CatState, str],
+        current_state: CatState,
+        current_frame: int,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.animator = Animator(
+            animation_data=animation_data,
+            starting_state=current_state,
+            frame_duration=999,
+        )
+        self.animator.animation.current_frame = current_frame
+
+        self.life = 0.5
+        self.decay_rate = 0.1 * self.speed_factor
+
+    def update(self) -> None:
+        self.life -= self.decay_rate
+        if self.life <= 0:
+            self.destroy()
+
+    def draw(self) -> None:
+        pyxel.dither(self.life)
+        self.animator.draw(self.position)
+        pyxel.dither(1.0)
 
 
 class Player(CoffeevaniaEntity):
@@ -224,21 +258,29 @@ class Player(CoffeevaniaEntity):
             self.velocity.yspeed = -self.jump_force
 
         # Acceleration due to gravity
-        # Allow holding jump to lessen effects of gravity
+        # Modifications: Lower gravity if jump held, higher gravity if jump tapped
+        base_grav = self.context.gravity
+        if self.context.input_handler.held(Action.JUMP):
+            base_grav *= 0.6
+        elif self.time_in_air < 15:
+            base_grav *= 1.5
+
         if not self._is_grounded():
             self.velocity.yspeed = clamp(
                 self.velocity.yspeed
-                + self.context.gravity
-                * (1 - 0.4 * self.context.input_handler.held(Action.JUMP)),
+                + base_grav,
                 -self.velocity.max_yspeed,
                 self.velocity.max_yspeed,
             )
 
-        # Check if collided with coffee
-        coffee = self.place_meeting(Coffee)
-        if coffee:
-            self.context.time_dilation *= 2
-            coffee.destroy()
+        # Check if collided with stuff
+        for e in list(self.context.collidables):
+            if isinstance(e, Coffee) and overlaps(self, e):
+                self.context.time_dilation *= 2
+                e.destroy()
+            elif isinstance(e, Checkpoint) and overlaps(self, e):
+                self.checkpoint_pos.x = e.position_start.x
+                self.checkpoint_pos.y = e.position_start.y
 
         if self.debug:
             self._debug_controls()
@@ -247,18 +289,20 @@ class Player(CoffeevaniaEntity):
         self.animator.update(self.state)
         self.animator.face_towards(hinput)
 
+        # Create our ghost - eh not sure I like it
+        # if pyxel.frame_count % 30 == 0:
+        #     self.context.app.create_entity(
+        #         PlayerGhost,
+        #         position=Position(self.position.x, self.position.y),
+        #         animation_data=self.animator.animation_data,
+        #         current_state=self.state,
+        #         current_frame=self.animator.animation.current_frame,
+        #     )
+
     def draw(self) -> None:
         self.animator.draw(position=self.position)
         if self.debug:
             self._debug_draw()
-
-    def place_meeting(self, other: Type[Collidable]) -> Optional[Collidable]:
-        for e in self.context.collidables:
-            if isinstance(e, other):
-                if overlaps(self, e):
-                    return e
-
-        return None
 
     def die(self) -> None:
         # Go back to checkpoint!
@@ -363,3 +407,35 @@ class Coffee(Collectible):
 
     def draw(self) -> None:
         self.sprite.draw(Position(self.position.x, self.position.y + self.offset))
+
+
+class Checkpoint(Collectible):
+    position: Position
+    position_start: Position
+    collision: CollisionRectangle
+    REQUIRED = ("position",)
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.collision = CollisionRectangle(8, 8, solid=False)
+
+    def post_init(self) -> None:
+        self.position_start = Position(self.position.x, self.position.y)
+        gx = int(self.position.x // GRID_SIZE)
+        gy = int(self.position.y // GRID_SIZE)
+
+        current_gy = gy
+        while current_gy >= 0:
+            if (gx, current_gy) in self.context.collision_map:
+                break
+            current_gy -= 1
+
+        ceiling_y = (current_gy + 1) * GRID_SIZE
+        beam_height = self.position.y - ceiling_y
+        self.position.y = ceiling_y
+        self.collision.height = beam_height + GRID_SIZE
+
+    def draw(self) -> None:
+        pyxel.circ(
+            self.position_start.x + 4, self.position_start.y + 4, 4, pyxel.COLOR_PEACH
+        )

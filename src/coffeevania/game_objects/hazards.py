@@ -5,7 +5,7 @@ from typing import Any
 
 import pyxel
 
-from coffeevania.common.game import GAME_HEIGHT, GAME_WIDTH
+from coffeevania.common.game import GAME_WIDTH
 from coffeevania.components.collision import CollisionRectangle
 from coffeevania.components.position import Position
 from coffeevania.components.sprites import Animation
@@ -227,7 +227,7 @@ class Saw(Hazard):
 
         for gx in [int(left), int(right)]:
             if (gx, int(top)) in self.context.collision_map:
-                    return True
+                return True
         return False
 
     def post_init(self) -> None:
