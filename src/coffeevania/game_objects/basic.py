@@ -142,7 +142,6 @@ class PlayerGhost(CoffeevaniaEntity):
         self.animator.draw(self.position)
         pyxel.dither(1.0)
 
-
 class Player(CoffeevaniaEntity):
     position: Position
     REQUIRED = ("position",)
@@ -186,37 +185,51 @@ class Player(CoffeevaniaEntity):
         hinput = self.context.input_handler.hinput
 
         target_xspeed = hinput * self.velocity.max_xspeed
-        # TODO: Possibly use easing? Lerp seems 'jumpy'
-        self.velocity.xspeed = clamp(
-            lerp(self.velocity.xspeed, target_xspeed, 0.3, epsilon=0.01),
-            -self.velocity.max_xspeed,
-            self.velocity.max_xspeed,
+        # This allows for speeds higher than max speed to be applied by external forces
+        target_xspeed = clamp(
+            target_xspeed, -self.velocity.max_xspeed, self.velocity.max_xspeed
         )
+        self.velocity.xspeed = lerp(
+            self.velocity.xspeed, target_xspeed, 0.3, epsilon=0.01
+        )
+
+        # Conveyor belts
+        foot_gx = int(self.position.x // GRID_SIZE)
+        foot_gy = int((self.position.y + self.collision.height + 1) // GRID_SIZE)
+        tile_data = self.context.collision_map.get((foot_gx, foot_gy))
+
+        if tile_data in [1, -1]:
+            yeet_force = (Conveyor.yeet_force * self.speed_factor) * tile_data
+            
+            self.position.x += yeet_force
+            self.velocity.yspeed -= 4 * self.speed_factor
+
+        if self.velocity.xspeed > 0 and self.is_at_solid(self.position.x + 1, self.position.y):
+            self.velocity.xspeed = 0
+        elif self.velocity.xspeed < 0 and self.is_at_solid(self.position.x - 1, self.position.y):
+            self.velocity.xspeed = 0
 
         # X axis
         if self.velocity.xspeed != 0:
-            self.position.x += self.velocity.xspeed
-
-            if self.is_at_solid(self.position.x, self.position.y):
+            new_x = self.position.x + self.velocity.xspeed
+            if self.is_at_solid(new_x, self.position.y):
+                # Snap without ever moving into the wall
                 if self.velocity.xspeed > 0:
-                    right_edge = (
-                        self.position.x
-                        + self.collision.offset_x
-                        + self.collision.width
-                        - 1
-                    )
+                    right_edge = new_x + self.collision.offset_x + self.collision.width - 1
                     self.position.x = (
-                        (right_edge // GRID_SIZE) * GRID_SIZE
+                        int(right_edge // GRID_SIZE) * GRID_SIZE
                         - self.collision.width
                         - self.collision.offset_x
                     )
+                    print(self.position.x)
                 else:
-                    left_edge = self.position.x + self.collision.offset_x
+                    left_edge = new_x + self.collision.offset_x
                     self.position.x = (
-                        left_edge // GRID_SIZE + 1
+                        int(left_edge // GRID_SIZE) + 1
                     ) * GRID_SIZE - self.collision.offset_x
-
                 self.velocity.xspeed = 0
+            else:
+                self.position.x = new_x
 
         # Y axis
         if self.velocity.yspeed != 0:
@@ -262,13 +275,12 @@ class Player(CoffeevaniaEntity):
         base_grav = self.context.gravity
         if self.context.input_handler.held(Action.JUMP):
             base_grav *= 0.6
-        elif self.time_in_air < 15:
+        elif self.time_in_air < 20:
             base_grav *= 1.5
 
         if not self._is_grounded():
             self.velocity.yspeed = clamp(
-                self.velocity.yspeed
-                + base_grav,
+                self.velocity.yspeed + base_grav,
                 -self.velocity.max_yspeed,
                 self.velocity.max_yspeed,
             )
@@ -333,7 +345,7 @@ class Player(CoffeevaniaEntity):
         pyxel.text(
             self.position.x + 8,
             self.position.y,
-            str(self.context.time_dilation),
+            str(self.position.x),
             3,
         )
 
@@ -439,3 +451,16 @@ class Checkpoint(Collectible):
         pyxel.circ(
             self.position_start.x + 4, self.position_start.y + 4, 4, pyxel.COLOR_PEACH
         )
+
+class Conveyor(CoffeevaniaEntity):
+    position: Position
+    collision: CollisionRectangle
+    yeet_force: int = 32
+    REQUIRED = ("position",)
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.collision = CollisionRectangle(8, 8, solid=True)
+
+    def draw(self) -> None:
+        pyxel.rect(self.position.x, self.position.y, GRID_SIZE, GRID_SIZE, pyxel.COLOR_GREEN)
