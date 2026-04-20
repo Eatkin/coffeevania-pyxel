@@ -34,38 +34,45 @@
     "width": 32,
     "height": 8
   },
-  "Spike": {
+  "QuadShooter": {
     "bank": 0,
     "x": 208,
     "y": 0,
     "width": 8,
     "height": 8
   },
-  "Bullet": {
+  "Spike": {
     "bank": 0,
     "x": 216,
+    "y": 0,
+    "width": 8,
+    "height": 8
+  },
+  "Bullet": {
+    "bank": 0,
+    "x": 224,
     "y": 0,
     "width": 4,
     "height": 4
   },
   "Saw": {
     "bank": 0,
-    "x": 224,
-    "y": 0,
+    "x": 0,
+    "y": 8,
     "width": 32,
     "height": 8
   },
   "VerticalShooter": {
     "bank": 0,
-    "x": 0,
-    "y": 8,
+    "x": 232,
+    "y": 0,
     "width": 8,
     "height": 8
   },
   "Coffee": {
     "bank": 0,
-    "x": 8,
-    "y": 8,
+    "x": 240,
+    "y": 0,
     "width": 8,
     "height": 8
   }

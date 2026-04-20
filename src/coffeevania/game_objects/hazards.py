@@ -158,6 +158,37 @@ class VerticalShooter(Hazard):
     def draw(self) -> None:
         self.sprite.draw(Position(self.position.x, self.position.y - 1))
 
+class QuadShooter(Hazard):
+    position: Position
+    REQUIRED = ("position",)
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.collision = CollisionRectangle(4, 4, 2, 2)
+        self.shoot_timer = 0.0
+        self.shoot_rate = 3.0
+        self.sprite = StaticSprite("QuadShooter")
+
+    def update(self) -> None:
+        self.shoot_timer += self.speed_factor
+        if self.shoot_timer >= self.shoot_rate:
+            self.shoot_timer = 0
+            self._shoot()
+
+    def _shoot(self) -> None:
+        # Fires in an X-pattern (45-degree increments from horizontal)
+        angles = [45, 135, 225, 315]
+        
+        for angle in angles:
+            self.context.app.create_entity(
+                Bullet,
+                position=Position(self.position.x, self.position.y),
+                speed=10,
+                angle=angle,
+            )
+
+    def draw(self) -> None:
+        self.sprite.draw(Position(self.position.x, self.position.y - 1))
 
 class Bullet(Hazard):
     position: Position

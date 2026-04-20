@@ -14,8 +14,8 @@ from coffeevania.game_objects.basic import Block
 from coffeevania.game_objects.basic import Checkpoint
 from coffeevania.game_objects.basic import Coffee
 from coffeevania.game_objects.basic import CoffeevaniaEntity
-from coffeevania.game_objects.basic import Conveyor
 from coffeevania.game_objects.basic import Player
+from coffeevania.game_objects.hazards import QuadShooter
 from coffeevania.game_objects.hazards import Saw
 from coffeevania.game_objects.hazards import Spike
 from coffeevania.game_objects.hazards import VerticalShooter
@@ -38,8 +38,9 @@ def get_legend(
         "V": lambda x, y: context.app.create_entity(
             VerticalShooter, position=Position(x, y)
         ),
-        "B": lambda x, y: context.app.create_entity(Conveyor, position=Position(x, y)),
-        "b": lambda x, y: context.app.create_entity(Conveyor, position=Position(x, y)),
+        "q": lambda x, y: context.app.create_entity(
+            QuadShooter, position=Position(x, y)
+        ),
         ".": None,
     }
 

@@ -142,6 +142,7 @@ class PlayerGhost(CoffeevaniaEntity):
         self.animator.draw(self.position)
         pyxel.dither(1.0)
 
+
 class Player(CoffeevaniaEntity):
     position: Position
     REQUIRED = ("position",)
@@ -200,13 +201,17 @@ class Player(CoffeevaniaEntity):
 
         if tile_data in [1, -1]:
             yeet_force = (Conveyor.yeet_force * self.speed_factor) * tile_data
-            
+
             self.position.x += yeet_force
             self.velocity.yspeed -= 4 * self.speed_factor
 
-        if self.velocity.xspeed > 0 and self.is_at_solid(self.position.x + 1, self.position.y):
+        if self.velocity.xspeed > 0 and self.is_at_solid(
+            self.position.x + 1, self.position.y
+        ):
             self.velocity.xspeed = 0
-        elif self.velocity.xspeed < 0 and self.is_at_solid(self.position.x - 1, self.position.y):
+        elif self.velocity.xspeed < 0 and self.is_at_solid(
+            self.position.x - 1, self.position.y
+        ):
             self.velocity.xspeed = 0
 
         # X axis
@@ -215,7 +220,9 @@ class Player(CoffeevaniaEntity):
             if self.is_at_solid(new_x, self.position.y):
                 # Snap without ever moving into the wall
                 if self.velocity.xspeed > 0:
-                    right_edge = new_x + self.collision.offset_x + self.collision.width - 1
+                    right_edge = (
+                        new_x + self.collision.offset_x + self.collision.width - 1
+                    )
                     self.position.x = (
                         int(right_edge // GRID_SIZE) * GRID_SIZE
                         - self.collision.width
@@ -345,7 +352,7 @@ class Player(CoffeevaniaEntity):
         pyxel.text(
             self.position.x + 8,
             self.position.y,
-            str(self.position.x),
+            str(self.context.time_dilation),
             3,
         )
 
@@ -452,6 +459,7 @@ class Checkpoint(Collectible):
             self.position_start.x + 4, self.position_start.y + 4, 4, pyxel.COLOR_PEACH
         )
 
+
 class Conveyor(CoffeevaniaEntity):
     position: Position
     collision: CollisionRectangle
@@ -463,4 +471,6 @@ class Conveyor(CoffeevaniaEntity):
         self.collision = CollisionRectangle(8, 8, solid=True)
 
     def draw(self) -> None:
-        pyxel.rect(self.position.x, self.position.y, GRID_SIZE, GRID_SIZE, pyxel.COLOR_GREEN)
+        pyxel.rect(
+            self.position.x, self.position.y, GRID_SIZE, GRID_SIZE, pyxel.COLOR_GREEN
+        )
